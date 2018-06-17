@@ -18,4 +18,5 @@ if (empty($lang) || !is_array($lang))
 }
 
 $lang = array_merge($lang, array(
+	'NO_SCUMDAYS' => 'No scumdays'
 ));

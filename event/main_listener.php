@@ -41,13 +41,6 @@ class main_listener implements EventSubscriberInterface
 
 	/** @var string phpEx */
 	protected $php_ext;
-
-	/**
-	* the path to the images directory
-	*
-	*@var string
-	*/
-	protected $birthdaycake_path;
 	
     static public function getSubscribedEvents()
     {
@@ -57,7 +50,7 @@ class main_listener implements EventSubscriberInterface
 			'core.viewtopic_modify_post_row' => 'add_cake',
         );
     }
-    public function __construct( \phpbb\request\request $request, \phpbb\db\driver\driver_interface $db,  \phpbb\user $user, \phpbb\user_loader $user_loader, \phpbb\language\language $language, $phpbb_root_path,$php_ext,$birthdaycake_path))
+    public function __construct( \phpbb\request\request $request, \phpbb\db\driver\driver_interface $db,  \phpbb\user $user, \phpbb\user_loader $user_loader, \phpbb\language\language $language, $phpbb_root_path,$php_ext)
     {
         $this->request = $request;
         $this->db = $db;
@@ -95,13 +88,20 @@ class main_listener implements EventSubscriberInterface
 		return false;
 	}
 	function limit_birthdays($event){
+		echo ("2nd test");
+		exit;
 		$sql = $event['sql_ary'];
 		$sql['WHERE'] .= ' AND ADDDATE(from_unixtime(u.user_lastvisit), INTERVAL 1 YEAR) > CURDATE()
 						   AND u.user_posts > 41';
 		$event['sql_ary'] = $sql;
 	}
 	function generate_scumday_template($event) {
+		$this->language->add_lang('common', 'mafiascum/miscellaneous');
 		$scumdays = array();
+		echo ("load_birthdays:" + $config['load_birthdays'] + "<br/>");
+		echo ("allow_birthdays:" + $config['allow_birthdays'] + "<br/>");
+		echo ("permmissions:" + $auth->acl_gets('u_viewprofile', 'a_user', 'a_useradd', 'a_userdel') + "<br/>");
+		exit;
 		if ($config['load_birthdays'] && $config['allow_birthdays'] && $auth->acl_gets('u_viewprofile', 'a_user', 'a_useradd', 'a_userdel'))
 		{
 			$time = $user->create_datetime();
@@ -134,7 +134,7 @@ class main_listener implements EventSubscriberInterface
 			$result = $db->sql_query($sql);
 			$rows = $db->sql_fetchrowset($result);
 			$db->sql_freeresult($result);
-
+			print_r($rows);
 			foreach ($rows as $row)
 			{
 				$scumday_username	= get_username_string('full', $row['user_id'], $row['username'], $row['user_colour']);
