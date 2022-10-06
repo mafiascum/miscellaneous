@@ -59,7 +59,9 @@ class main_listener implements EventSubscriberInterface
 		$this->auth = $auth;
 		$this->template = $template;
     }
-	function add_cake($event){
+	function add_cake($event) {
+		/***
+		global $config;
 		$now = getdate(time() + $this->user->timezone + $this->user->dst - date('Z'));
 		$user_data = $event['user_poster_data'];
 		$post_row = $event['post_row'];
@@ -79,6 +81,7 @@ class main_listener implements EventSubscriberInterface
 		$event['post_row'] = array_merge($event['post_row'],array(
 			'USER_SCUMDAYCAKE' => $cake,
 		));
+		***/
 	}
     /**
      * Load the language file
