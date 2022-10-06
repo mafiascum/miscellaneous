@@ -16,6 +16,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 /**
  * Event listener
  */
+
 class main_listener implements EventSubscriberInterface
 {
     /* @var \phpbb\request\request */
@@ -30,35 +31,33 @@ class main_listener implements EventSubscriberInterface
     /* @var \phpbb\user_loader */
     protected $user_loader;
 
-    /* @var \phpbb\auth\auth */
-    protected $auth;
-
     /* phpbb\language\language */
     protected $language;
 
-	/** @var string phpBB root path */
-	protected $phpbb_root_path;
+    /* @var \phpbb\auth\auth */
+    protected $auth;
 
-	/** @var string phpEx */
-	protected $php_ext;
+    /* @var \phpbb\template\template */
+    protected $template;
 	
     static public function getSubscribedEvents()
     {
         return array(
+			'core.user_setup'  => 'load_language_on_setup',
             'core.index_modify_birthdays_list' => 'generate_scumday_template',
 			'core.index_modify_birthdays_sql' => 'limit_birthdays',
 			'core.viewtopic_modify_post_row' => 'add_cake',
         );
     }
-    public function __construct( \phpbb\request\request $request, \phpbb\db\driver\driver_interface $db,  \phpbb\user $user, \phpbb\user_loader $user_loader, \phpbb\language\language $language, $phpbb_root_path,$php_ext)
+    public function __construct( \phpbb\request\request $request, \phpbb\db\driver\driver_interface $db,  \phpbb\user $user, \phpbb\user_loader $user_loader, \phpbb\language\language $language, \phpbb\auth\auth $auth, \phpbb\template\template $template)
     {
         $this->request = $request;
         $this->db = $db;
         $this->user = $user;
         $this->user_loader = $user_loader;
         $this->language = $language;
-        $this->auth = $auth;
-        $this->table_prefix = $table_prefix;
+		$this->auth = $auth;
+		$this->template = $template;
     }
 	function add_cake($event){
 		$now = getdate(time() + $this->user->timezone + $this->user->dst - date('Z'));
@@ -81,6 +80,20 @@ class main_listener implements EventSubscriberInterface
 			'USER_SCUMDAYCAKE' => $cake,
 		));
 	}
+    /**
+     * Load the language file
+     *
+     * @param \phpbb\event\data $event The event object
+     */
+    public function load_language_on_setup($event)
+    {
+        $lang_set_ext = $event['lang_set_ext'];
+        $lang_set_ext[] = array(
+            'ext_name' => 'mafiascum/miscellaneous',
+            'lang_set' => 'common',
+        );
+        $event['lang_set_ext'] = $lang_set_ext;
+    }
 	function getUserScumdayCake ($isBirthday){
 		if ($isBirthday){
 			return '<img src="' . $this->root_path . 'ext/mafiascum/miscellaneous/images/icon_scumday.png" alt="' . $this->user->lang['VIEWTOPIC_BIRTHDAY'] . '" title="' . $this->user->lang['VIEWTOPIC_BIRTHDAY'] . '"  style="vertical-align:middle;" />';
@@ -88,53 +101,29 @@ class main_listener implements EventSubscriberInterface
 		return false;
 	}
 	function limit_birthdays($event){
-		echo ("2nd test");
-		exit;
 		$sql = $event['sql_ary'];
 		$sql['WHERE'] .= ' AND ADDDATE(from_unixtime(u.user_lastvisit), INTERVAL 1 YEAR) > CURDATE()
 						   AND u.user_posts > 41';
 		$event['sql_ary'] = $sql;
 	}
 	function generate_scumday_template($event) {
+		global $config;
 		$this->language->add_lang('common', 'mafiascum/miscellaneous');
 		$scumdays = array();
-		echo ("load_birthdays:" + $config['load_birthdays'] + "<br/>");
-		echo ("allow_birthdays:" + $config['allow_birthdays'] + "<br/>");
-		echo ("permmissions:" + $auth->acl_gets('u_viewprofile', 'a_user', 'a_useradd', 'a_userdel') + "<br/>");
-		exit;
-		if ($config['load_birthdays'] && $config['allow_birthdays'] && $auth->acl_gets('u_viewprofile', 'a_user', 'a_useradd', 'a_userdel'))
+		if ($config['load_birthdays'] && $config['allow_birthdays'])
 		{
-			$time = $user->create_datetime();
-			$now = phpbb_gmgetdate($time->getTimestamp() + $time->getOffset());
-
-			$leap_year_birthdays = '';
-			if ($now['mday'] == 28 && $now['mon'] == 2 && !$time->format('L'))
-			{
-				$leap_year_birthdays = " OR u.user_regdate LIKE '" . $db->sql_escape(sprintf('%2d-%2d-', 29, 2)) . "%'";
-			}
-
-			$sql_ary = array(
-				'SELECT' => 'u.user_id, u.username, u.user_colour, u.user_regdate',
-				'FROM' => array(
-					USERS_TABLE => 'u',
-				),
-				'LEFT_JOIN' => array(
-					array(
-						'FROM' => array(BANLIST_TABLE => 'b'),
-						'ON' => 'u.user_id = b.ban_userid',
-					),
-				),
-				'WHERE' => "(b.ban_id IS NULL OR b.ban_exclude = 1)
-					AND (u.user_regdate LIKE '" . $db->sql_escape(sprintf('%2d-%2d-', $now['mday'], $now['mon'])) . "%' $leap_year_birthdays)
-					AND u.user_type IN (" . USER_NORMAL . ', ' . USER_FOUNDER . ') 
-					AND ADDDATE(from_unixtime(u.user_lastvisit), INTERVAL 1 YEAR) > CURDATE() 
-					AND u.user_posts > 41'
-			);
-			$sql = $db->sql_build_query('SELECT', $sql_ary);
-			$result = $db->sql_query($sql);
-			$rows = $db->sql_fetchrowset($result);
-			$db->sql_freeresult($result);
-			print_r($rows);
+			$sql = ' SELECT u.user_id, u.username, u.user_colour, u.user_regdate
+				     FROM ' . USERS_TABLE . ' u
+				     LEFT JOIN ' . BANLIST_TABLE . ' b ON u.user_id = b.ban_userid
+				     WHERE (b.ban_id IS NULL OR b.ban_exclude = 1)
+					 AND DATE_FORMAT(NOW(), "%m-%d") = DATE_FORMAT(FROM_UNIXTIME(u.user_regdate), "%m-%d")
+					 AND DATE(NOW()) != DATE(FROM_UNIXTIME(u.user_regdate))
+					 AND u.user_type IN (' . USER_NORMAL . ', ' . USER_FOUNDER . ') 
+					 AND ADDDATE(from_unixtime(u.user_lastvisit), INTERVAL 1 YEAR) > CURDATE() 
+					 AND u.user_posts > 41';
+			$result = $this->db->sql_query($sql);
+			$rows = $this->db->sql_fetchrowset($result);
+			$this->db->sql_freeresult($result);
 			foreach ($rows as $row)
 			{
 				$scumday_username	= get_username_string('full', $row['user_id'], $row['username'], $row['user_colour']);
@@ -143,7 +132,7 @@ class main_listener implements EventSubscriberInterface
 					'USERNAME'	=> $scumday_username
 				);
 			}
-			$template->assign_block_vars_array('scumdays', $scumdays);
+			$this->template->assign_block_vars_array('scumdays', $scumdays);
 		}
 	}
 

@@ -1,0 +1,13 @@
+services:
+    mafiascum.miscellaneous.listener:
+        class: mafiascum\miscellaneous\event\main_listener
+        arguments:
+            - '@request'
+            - '@dbal.conn'
+            - '@user'
+            - '@user_loader'
+            - '@language'
+            - '@auth'
+            - '@template'
+        tags:
+            - { name: event.listener }
