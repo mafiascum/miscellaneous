@@ -46,7 +46,7 @@ class main_listener implements EventSubscriberInterface
 			'core.user_setup'  => 'load_language_on_setup',
             'core.index_modify_birthdays_list' => 'generate_scumday_template',
 			'core.index_modify_birthdays_sql' => 'limit_birthdays',
-			'core.viewtopic_modify_post_row' => 'add_cake',
+			'core.viewtopic_cache_user_data' => 'viewtopic_cache_user_data'
         );
     }
     public function __construct( \phpbb\request\request $request, \phpbb\db\driver\driver_interface $db,  \phpbb\user $user, \phpbb\user_loader $user_loader, \phpbb\language\language $language, \phpbb\auth\auth $auth, \phpbb\template\template $template)
@@ -59,7 +59,16 @@ class main_listener implements EventSubscriberInterface
 		$this->auth = $auth;
 		$this->template = $template;
     }
+	function viewtopic_cache_user_data($event) {
+		$row = $event['row'];
+		$user_cache_data = $event['user_cache_data'];
+
+		$user_cache_data['joined'] = $this->user->format_date($row['user_regdate'], 'F j, Y');
+
+		$event['user_cache_data'] = $user_cache_data;
+	}
 	function add_cake($event) {
+
 		/***
 		global $config;
 		$now = getdate(time() + $this->user->timezone + $this->user->dst - date('Z'));
