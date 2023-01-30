@@ -46,7 +46,8 @@ class main_listener implements EventSubscriberInterface
 			'core.user_setup'  => 'load_language_on_setup',
             'core.index_modify_birthdays_list' => 'generate_scumday_template',
 			'core.index_modify_birthdays_sql' => 'limit_birthdays',
-			'core.viewtopic_cache_user_data' => 'viewtopic_cache_user_data'
+			'core.viewtopic_cache_user_data' => 'viewtopic_cache_user_data',
+			'core.viewtopic_modify_post_row' => 'viewtopic_modify_post_row'
         );
     }
     public function __construct( \phpbb\request\request $request, \phpbb\db\driver\driver_interface $db,  \phpbb\user $user, \phpbb\user_loader $user_loader, \phpbb\language\language $language, \phpbb\auth\auth $auth, \phpbb\template\template $template)
@@ -59,6 +60,25 @@ class main_listener implements EventSubscriberInterface
 		$this->auth = $auth;
 		$this->template = $template;
     }
+	function viewtopic_modify_post_row($event) {
+		$post_row = $event['post_row'];
+		$original_signature = $post_row['SIGNATURE'];
+		$reformatted_signature = $original_signature;
+
+		$lines = substr_count($original_signature, '<br>') + 1;
+
+		if($lines > 4) {
+			$javascript  = "var container = this.parentElement.querySelector('.signature-collapsible');"
+			             . "container.classList.toggle('signature-collapsed');"
+			             . "this.innerText = container.classList.contains('signature-collapsed') ? 'Show' : 'Hide';"
+			             . "return false;";
+			$reformatted_signature = '<a href="#" onclick="javascript:' . $javascript . '">Show</a>';
+			$reformatted_signature .= '<div class="signature-collapsible signature-collapsed">' . $original_signature . '</div>';
+		}
+
+		$post_row['SIGNATURE'] = $reformatted_signature;
+		$event['post_row'] = $post_row;
+	}
 	function viewtopic_cache_user_data($event) {
 		$row = $event['row'];
 		$user_cache_data = $event['user_cache_data'];
