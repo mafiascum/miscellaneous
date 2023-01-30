@@ -18,5 +18,6 @@ if (empty($lang) || !is_array($lang))
 }
 
 $lang = array_merge($lang, array(
-	'NO_SCUMDAYS' => 'Nobody is having a scumday today!'
+	'NO_SCUMDAYS' => 'Nobody is having a scumday today!',
+	'SEARCH_USER_TOPICS'		=> 'Search user\'s topics',
 ));

@@ -47,7 +47,8 @@ class main_listener implements EventSubscriberInterface
             'core.index_modify_birthdays_list' => 'generate_scumday_template',
 			'core.index_modify_birthdays_sql' => 'limit_birthdays',
 			'core.viewtopic_cache_user_data' => 'viewtopic_cache_user_data',
-			'core.viewtopic_modify_post_row' => 'viewtopic_modify_post_row'
+			'core.viewtopic_modify_post_row' => 'viewtopic_modify_post_row',
+			'core.memberlist_prepare_profile_data' => 'memberlist_prepare_profile_data'
         );
     }
     public function __construct( \phpbb\request\request $request, \phpbb\db\driver\driver_interface $db,  \phpbb\user $user, \phpbb\user_loader $user_loader, \phpbb\language\language $language, \phpbb\auth\auth $auth, \phpbb\template\template $template)
@@ -60,6 +61,17 @@ class main_listener implements EventSubscriberInterface
 		$this->auth = $auth;
 		$this->template = $template;
     }
+	function memberlist_prepare_profile_data($event) {
+		global $phpEx;
+
+		$template_data = $event['template_data'];
+		$user_data = $event['data'];
+		
+		$user_id = $user_data['user_id'];
+		$template_data['U_SEARCH_TOPICS'] = "/search.$phpEx?author_id=$user_id&sr=topics";
+
+		$event['template_data'] = $template_data;
+	}
 	function viewtopic_modify_post_row($event) {
 		$post_row = $event['post_row'];
 		$original_signature = $post_row['SIGNATURE'];
